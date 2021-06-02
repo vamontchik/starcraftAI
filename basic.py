@@ -12,7 +12,10 @@ class Basic(sc2.BotAI):
         self.distance_calculation_method: int = 2
         self.raw_affects_selection: bool = True
         self.unit_command_uses_self_do: bool = False # TODO: what is this for???
+        
         self.logic: List[Callable[[], None]] = [self.progression_loop]
+        
+        self.is_attacking = False
 
     async def progression_loop(self):    
         # train SCVs until we hit mineral field limit
@@ -25,9 +28,11 @@ class Basic(sc2.BotAI):
         ): 
             cc.train(UnitTypeId.SCV)
             
-        # build depots as necessary
-        # only build ONE at a time
-        if self.supply_left <= 2 and self.already_pending(UnitTypeId.SUPPLYDEPOT) < 1:
+        # build depots as necessary, building more w/ more supply
+        if (
+            self.supply_left <= max(2, int(self.supply_used/20)) 
+            and self.already_pending(UnitTypeId.SUPPLYDEPOT) < max(1, int(self.supply_used/20))
+        ):
             map_center: Point2 = self.game_info.map_center
             position_towards_map_center: Point2 = self.start_location.towards(map_center, distance=5)
             await self.build(UnitTypeId.SUPPLYDEPOT, near=position_towards_map_center, placement_step=1)
@@ -41,14 +46,14 @@ class Basic(sc2.BotAI):
             cc: Unit = self.townhalls(UnitTypeId.COMMANDCENTER).first
             scv.smart(self.mineral_field.closest_to(cc))
             
-        # build up to 3 rax
+        # build up to 6 rax
         # NOTE: we can get away with not checking self.already_pending(<barracks>) because
         #       we don't accumulate enough minerals that quickly anyway...
         # NOTE2: self.already_pending is only for queued buildings, self.buildings(<barracks>)
         #        will accumulate all constructed AND currently-being-built buildings as well
         if (
             self.can_afford(UnitTypeId.BARRACKS)
-            and self.structures(UnitTypeId.BARRACKS).amount < 3
+            and self.structures(UnitTypeId.BARRACKS).amount < 6
         ):
             map_center: Point2 = self.game_info.map_center
             position_towards_map_center: Point2 = self.start_location.towards(map_center, distance=5)
@@ -61,13 +66,17 @@ class Basic(sc2.BotAI):
             if self.can_afford(UnitTypeId.MARINE):
                 rax.train(UnitTypeId.MARINE)
 
-        # at 30 marines, attack their base
+        # attack enemy base with waves of 15 units
         # NOTE: assume there is at least one enemy start location?
-        marines: Units = self.units(UnitTypeId.MARINE)
-        if marines.amount > 30:
-            target: Point2 = self.enemy_start_locations[0].position # type(self.enemy_start_locations) = List[Point2] ?
+        # NOTE2: use of '.idle' is IMPORTANT! this allows us to send marines in batches,
+        #        since units simply sitting around will be idle and ones attacking the enemy base
+        #        won't be selectd...
+        marines: Units = self.units(UnitTypeId.MARINE).idle
+        if marines.amount > 15:
+            target: Point2 = self.enemy_start_locations[0].position # type(self.enemy_start_locations) = List[Point2]
             for marine in marines:
-                marine.attack(target)        
+                marine.attack(target)
+                
 
     async def on_start(self):
         self.client.game_step: int = 60 # NOTE: every 60 frames !
@@ -81,7 +90,7 @@ class Basic(sc2.BotAI):
 
 run_game(
     maps.get('Acropolis LE'),
-    [ Bot(Race.Terran, Basic()), Computer(Race.Protoss, Difficulty.VeryEasy) ],
+    [ Bot(Race.Terran, Basic()), Computer(Race.Protoss, Difficulty.Medium) ],
     realtime=True
 )
 
