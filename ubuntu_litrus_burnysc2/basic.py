@@ -359,7 +359,7 @@ class Basic(sc2.BotAI):
 
 run_game(
     maps.get('Acropolis LE'),
-    [ Bot(Race.Terran, Basic()), Computer(Race.Zerg, Difficulty.Medium) ],
+    [ Bot(Race.Terran, Basic()), Computer(Race.Protoss, Difficulty.Hard) ],
     realtime=True
 )
 
