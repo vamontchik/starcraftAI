@@ -1,6 +1,5 @@
 import sc2
 
-from sc2 import run_game, maps, Race, Difficulty
 from sc2.ids.unit_typeid import UnitTypeId
 from sc2.ids.ability_id import AbilityId
 from sc2.ids.upgrade_id import UpgradeId
@@ -8,14 +7,13 @@ from sc2.position import Point2#, Point3
 from sc2.unit import Unit
 from sc2.unit_command import UnitCommand
 from sc2.units import Units
-from sc2.player import Bot, Computer
 
 from typing import List, Dict
 
 # TODO: if we wanna keep track of specific units or buildings, we can use their 'tag' fields...
 # TODO: figure out a better way of placing down structures on the map...
 
-class Basic(sc2.BotAI):
+class MM(sc2.BotAI):
     def __init__(self):
         # TODO: (minor) should be most efficient dist calc?
         self.distance_calculation_method: int = 2 
@@ -89,7 +87,8 @@ class Basic(sc2.BotAI):
         # NOTE2: above NOTE is why we ONLY use self.structures(<rax>)...
         # TODO: (minor) figure out a way to only pull scvs that are mining minerals...
         # TODO: figure out a BETTER way to place rax so there is always
-        #       room for techlab / reactor upgrades...
+        #       room for techlab / reactor upgrades... currently,
+        #       values are hard-coded per map...
         
         amt_rax: int = self.structures(UnitTypeId.BARRACKS).amount
         if (
@@ -100,7 +99,7 @@ class Basic(sc2.BotAI):
                 map_center: Point2 = self.game_info.map_center
                 target: Point2 = self.start_location.towards(
                     map_center, 
-                    distance=16)
+                    distance=14)
                 
                 await self.build(
                     UnitTypeId.BARRACKS,
@@ -334,32 +333,4 @@ class Basic(sc2.BotAI):
         
     async def on_step(self, iteration: int):
         await self.progression_loop()
-
-#[
-#    <AIBuild.RandomBuild: 1>, 
-#    <AIBuild.Rush: 2>, 
-#    <AIBuild.Timing: 3>, 
-#    <AIBuild.Power: 4>, 
-#    <AIBuild.Macro: 5>, 
-#    <AIBuild.Air: 6>
-#]
-# 
-#[
-#    <Difficulty.VeryEasy: 1>, 
-#    <Difficulty.Easy: 2>, 
-#    <Difficulty.Medium: 3>, 
-#    <Difficulty.MediumHard: 4>, 
-#    <Difficulty.Hard: 5>, 
-#    <Difficulty.Harder: 6>, 
-#    <Difficulty.VeryHard: 7>, 
-#    <Difficulty.CheatVision: 8>, 
-#    <Difficulty.CheatMoney: 9>, 
-#    <Difficulty.CheatInsane: 10>
-#]
-
-run_game(
-    maps.get('Acropolis LE'),
-    [ Bot(Race.Terran, Basic()), Computer(Race.Protoss, Difficulty.Hard) ],
-    realtime=True
-)
 
